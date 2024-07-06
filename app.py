@@ -58,7 +58,6 @@ if subject:
     subject_filter = filtered_data[subjects].apply(lambda row: any(subj in subject for subj in row), axis=1)
     filtered_data = filtered_data[subject_filter]
 
-# Column selection checkboxes
 st.sidebar.header('Columns to Display')
 show_roll_no = st.sidebar.checkbox('Roll No', value=True)
 show_sap_id = st.sidebar.checkbox('SAP ID', value=True)
@@ -88,9 +87,4 @@ if show_all_subjects:
     columns_to_show.extend(subjects)
 
 
-
-# Display results
-# st.header('Filtered Results')
 st.write(filtered_data[columns_to_show])
-
-# To run the app, use the command: streamlit run app.py
