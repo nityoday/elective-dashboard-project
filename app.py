@@ -66,7 +66,7 @@ show_branch = st.sidebar.checkbox('Branch', value=True)
 show_campus = st.sidebar.checkbox('Campus', value=True)
 show_major = st.sidebar.checkbox('Major', value=True)
 show_division = st.sidebar.checkbox('Division', value=True)
-show_all_subjects = st.sidebar.checkbox('All Subjects', value=True)
+show_all_subjects = st.sidebar.checkbox('Subjects', value=True)
 
 columns_to_show = []
 if show_roll_no:
