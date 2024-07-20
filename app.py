@@ -14,14 +14,14 @@ data = load_data('student_electives.xlsx')
 
 # Sidebar filters
 st.sidebar.header('Choose Filters')
-
-roll_no = st.sidebar.multiselect('Roll No', options=data['Roll No'].unique())
-sap_id = st.sidebar.multiselect('SAP ID', options=data['SAP ID'].unique())
-name = st.sidebar.multiselect('Name', options=data['Name'].unique())
 branch = st.sidebar.multiselect('Branch', options=data['Branch'].unique())
 campus = st.sidebar.multiselect('Campus', options=data['Campus'].unique())
 major = st.sidebar.multiselect('Major', options=data['Major'].unique())
 division = st.sidebar.multiselect('Division', options=data['Division'].unique())
+st.sidebar.write('Find by Identity Filters')
+roll_no = st.sidebar.multiselect('Roll No', options=data['Roll No'].unique())
+sap_id = st.sidebar.multiselect('SAP ID', options=data['SAP ID'].unique())
+name = st.sidebar.multiselect('Name', options=data['Name'].unique())
 
 # Creating a list of all subjects columns
 subjects = [col for col in data.columns if 'Subject' in col]
