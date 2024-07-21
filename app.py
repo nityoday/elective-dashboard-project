@@ -1,15 +1,15 @@
 import streamlit as st
 import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
+from streamlit_extras.colored_header import colored_header
+from streamlit_extras.let_it_rain import rain
 
 st.set_page_config(layout="wide")
 
-# Load the data
 @st.cache_data
 def load_data(file):
     df = pd.read_excel(file)
     df['SAP ID'] = df['SAP ID'].apply(lambda x: f'{x:.0f}')  # Convert SAP ID to string without commas
+    df = df.drop(columns=['Subject 1', 'Subject 2','Subject 3'])
     return df
 
 data = load_data('student_electives.xlsx')
@@ -25,36 +25,38 @@ roll_no = st.sidebar.multiselect('Roll No', options=data['Roll No'].unique())
 sap_id = st.sidebar.multiselect('SAP ID', options=data['SAP ID'].unique())
 name = st.sidebar.multiselect('Name', options=data['Name'].unique())
 
-# Creating a list of all subjects columns
+include_mandatory_subjects = st.sidebar.checkbox(
+    'Include Mandatory Subjects',
+    value=False,
+    help='Includes mandatory subjects for all students in the data',
+    key='include_mandatory_subjects',
+    disabled = True
+) # Disabled for now. May include later with respect to dropping columns Subject 1,2,3
+
+filtered_data = data
+
 subjects = [col for col in data.columns if 'Subject' in col]
 all_subjects = data[subjects].values.flatten()
 unique_subjects = list(set(all_subjects))
 
 subject = st.sidebar.multiselect('Subject', options=unique_subjects)
 
-# Apply filters
-filtered_data = data
+filter_dict = {
+    'Roll No': roll_no,
+    'SAP ID': sap_id,
+    'Name': name,
+    'Branch': branch,
+    'Campus': campus,
+    'Major': major,
+    'Division': division
+}
 
-if roll_no:
-    filtered_data = filtered_data[filtered_data['Roll No'].isin(roll_no)]
+# Apply filters dynamically
+# filtered_data = data.copy()
 
-if sap_id:
-    filtered_data = filtered_data[filtered_data['SAP ID'].isin(sap_id)]
-
-if name:
-    filtered_data = filtered_data[filtered_data['Name'].isin(name)]
-
-if branch:
-    filtered_data = filtered_data[filtered_data['Branch'].isin(branch)]
-
-if campus:
-    filtered_data = filtered_data[filtered_data['Campus'].isin(campus)]
-
-if major:
-    filtered_data = filtered_data[filtered_data['Major'].isin(major)]
-
-if division:
-    filtered_data = filtered_data[filtered_data['Division'].isin(division)]
+for column, values in filter_dict.items():
+    if values:
+        filtered_data = filtered_data[filtered_data[column].isin(values)]
 
 if subject:
     subject_filter = filtered_data[subjects].apply(lambda row: any(subj in subject for subj in row), axis=1)
@@ -88,54 +90,105 @@ if show_division:
 if show_all_subjects:
     columns_to_show.extend(subjects)
 
+st.dataframe(filtered_data[columns_to_show], hide_index=True)
 
-st.write(filtered_data[columns_to_show])
+colored_header(
+        label="Data Visualization",
+        description="The charts will update as you update filters",
+        color_name="violet-70",
+    )
 
-
-# Add charts
-st.header("Data Visualization")
-
-# Drop rows with 'Unknown' in any column
 filtered_data = filtered_data.replace('Unknown', pd.NA).dropna()
 
-# Layout for charts: 3 charts per row with space between them
-fig, axs = plt.subplots(2, 3, figsize=(20, 10))
-# fig.tight_layout(pad=5.0)
-fig.subplots_adjust(hspace=0.525, wspace=0.125)
+col1, col2, col3 = st.columns(3)
 
-# Chart 1: Distribution of students across branches
-sns.countplot(data=filtered_data, x='Branch', ax=axs[0, 0])
-axs[0, 0].set_title('Distribution of Students Across Branches')
-axs[0, 0].tick_params(axis='x', rotation=90)
+with col1:
+    st.subheader('Distribution of Students Across Branches')
+    branch_counts = filtered_data['Branch'].value_counts().sort_index()
+    st.bar_chart(branch_counts, use_container_width=True)
 
-# Chart 2: Distribution of students across campuses
-sns.countplot(data=filtered_data, x='Campus', ax=axs[0, 1])
-axs[0, 1].set_title('Distribution of Students Across Campuses')
-axs[0, 1].tick_params(axis='x', rotation=90)
+with col2:
+    st.subheader('Distribution of Students Across Campuses')
+    campus_counts = filtered_data['Campus'].value_counts().sort_index()
+    st.bar_chart(campus_counts, use_container_width=True)
 
-# Chart 3: Distribution of students across majors
-sns.countplot(data=filtered_data, x='Major', ax=axs[0, 2])
-axs[0, 2].set_title('Distribution of Students Across Majors')
-axs[0, 2].tick_params(axis='x', rotation=90)
+with col3:
+    st.subheader('Distribution of Students Across Majors')
+    major_counts = filtered_data['Major'].value_counts().sort_index()
+    st.bar_chart(major_counts, use_container_width=True)
 
-# Chart 4: Subject enrollment count
+st.subheader('Top 20 Subject Enrollment Distribution')
 subject_counts = filtered_data[subjects].melt(var_name='Subject Column', value_name='Subject').dropna()
-top_subjects = subject_counts['Subject'].value_counts().nlargest(20).index  # Top 20 subjects
-sns.countplot(data=subject_counts[subject_counts['Subject'].isin(top_subjects)], y='Subject', order=top_subjects, ax=axs[1, 0])
-axs[1, 0].set_title('Top 20 Subject Enrollment Count')
+top_subjects = subject_counts['Subject'].value_counts().nlargest(20).sort_values(ascending=False)
+top_subjects_df = top_subjects.reset_index()
+top_subjects_df.columns = ['Subject', 'Number of Students']
+top_subjects_df = top_subjects_df.sort_values(by='Number of Students', ascending=False)
 
-# Chart 5: Count of students per branch and campus
-sns.countplot(data=filtered_data, x='Branch', hue='Campus', ax=axs[1, 1])
-axs[1, 1].set_title('Count of Students per Branch and Campus')
-axs[1, 1].tick_params(axis='x', rotation=90)
+top_subjects_chart_data = top_subjects_df.set_index('Subject')['Number of Students']
+st.bar_chart(top_subjects_chart_data, use_container_width=True)
 
-# Chart 6: Count of students per branch and major
-sns.countplot(data=filtered_data, x='Branch', hue='Major', ax=axs[1, 2])
-axs[1, 2].set_title('Count of Students per Branch and Major')
-axs[1, 2].tick_params(axis='x', rotation=90)
+st.subheader('Least 10 Subject Enrollment Count Distribution')
+least_subjects = subject_counts['Subject'].value_counts().nsmallest(10).sort_values()
+least_subjects_df = least_subjects.reset_index()
+least_subjects_df.columns = ['Subject', 'Number of Students']
+least_subjects_df = least_subjects_df.sort_values(by='Number of Students', ascending=True)
 
-# Hide unused subplots
-axs[1, 2].axis('off')
+least_subjects_chart_data = least_subjects_df.set_index('Subject')['Number of Students']
+st.bar_chart(least_subjects_chart_data, use_container_width=True)
 
-# Display charts
-st.pyplot(fig)
+col4, col5 = st.columns(2)
+
+with col4:
+    st.subheader('Count of Students per Branch and Campus')
+    branch_campus_counts = filtered_data.groupby(['Branch', 'Campus']).size().unstack().fillna(0)
+    st.bar_chart(branch_campus_counts, use_container_width=True)
+
+with col5:
+    st.subheader('Count of Students per Branch and Major')
+    branch_major_counts = filtered_data.groupby(['Branch', 'Major']).size().unstack().fillna(0)
+    st.bar_chart(branch_major_counts, use_container_width=True)
+
+
+# def plot_with_rotated_labels(data, title):
+#     fig, ax = plt.subplots()
+#     data.plot(kind='bar', ax=ax)
+#     ax.set_title(title)
+#     plt.xticks(rotation=45, ha='right')
+#     st.pyplot(fig)
+
+# st.subheader('Top 20 Subject Enrollment Count (Adjusted Labels)')
+# plot_with_rotated_labels(top_subjects, 'Top 20 Subject Enrollment Count')
+
+# st.subheader('Least 10 Subject Enrollment Count (Adjusted Labels)')
+# plot_with_rotated_labels(least_subjects, 'Least 10 Subject Enrollment Count')
+
+st.markdown(
+    """
+    <div style="text-align: right;">
+        <p style="font-size: 16px; color: #666666; font-family: 'Arial', sans-serif;">
+           ✨ Bringing ideas to life, by <strong>Nityoday Tekchandani</strong>.
+        </p>
+        <!--
+        <a href="https://github.com/nityoday/elective-dashboard-project" target="_blank" style="text-decoration: none;">
+            <button style="font-size: 14px; padding: 10px 20px; color: #ffffff; background-color: #007BFF; border: none; border-radius: 5px; cursor: pointer;">
+                Feel free to contribute to this project :)
+            </button>
+        </a>
+        -->
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+if st.button("Feel free to contribute to this project :) "):
+    st.markdown('<a href="https://github.com/nityoday/elective-dashboard-project" target="_blank" style="text-decoration: none; color: #007BFF; font-size: 22px;">View this project on GitHub</a>', unsafe_allow_html=True)
+    rain(
+        emoji="🌟",
+        font_size=24,
+        falling_speed=3,
+        animation_length=2,
+    )
+
+# possible future feature inclusions:
+# https://arnaudmiribel.github.io/streamlit-extras/extras/altex/
+# https://arnaudmiribel.github.io/streamlit-extras/extras/app_logo/
