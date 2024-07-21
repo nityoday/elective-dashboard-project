@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 st.set_page_config(layout="wide")
 
@@ -88,3 +90,52 @@ if show_all_subjects:
 
 
 st.write(filtered_data[columns_to_show])
+
+
+# Add charts
+st.header("Data Visualization")
+
+# Drop rows with 'Unknown' in any column
+filtered_data = filtered_data.replace('Unknown', pd.NA).dropna()
+
+# Layout for charts: 3 charts per row with space between them
+fig, axs = plt.subplots(2, 3, figsize=(20, 10))
+# fig.tight_layout(pad=5.0)
+fig.subplots_adjust(hspace=0.525, wspace=0.125)
+
+# Chart 1: Distribution of students across branches
+sns.countplot(data=filtered_data, x='Branch', ax=axs[0, 0])
+axs[0, 0].set_title('Distribution of Students Across Branches')
+axs[0, 0].tick_params(axis='x', rotation=90)
+
+# Chart 2: Distribution of students across campuses
+sns.countplot(data=filtered_data, x='Campus', ax=axs[0, 1])
+axs[0, 1].set_title('Distribution of Students Across Campuses')
+axs[0, 1].tick_params(axis='x', rotation=90)
+
+# Chart 3: Distribution of students across majors
+sns.countplot(data=filtered_data, x='Major', ax=axs[0, 2])
+axs[0, 2].set_title('Distribution of Students Across Majors')
+axs[0, 2].tick_params(axis='x', rotation=90)
+
+# Chart 4: Subject enrollment count
+subject_counts = filtered_data[subjects].melt(var_name='Subject Column', value_name='Subject').dropna()
+top_subjects = subject_counts['Subject'].value_counts().nlargest(20).index  # Top 20 subjects
+sns.countplot(data=subject_counts[subject_counts['Subject'].isin(top_subjects)], y='Subject', order=top_subjects, ax=axs[1, 0])
+axs[1, 0].set_title('Top 20 Subject Enrollment Count')
+
+# Chart 5: Count of students per branch and campus
+sns.countplot(data=filtered_data, x='Branch', hue='Campus', ax=axs[1, 1])
+axs[1, 1].set_title('Count of Students per Branch and Campus')
+axs[1, 1].tick_params(axis='x', rotation=90)
+
+# Chart 6: Count of students per branch and major
+sns.countplot(data=filtered_data, x='Branch', hue='Major', ax=axs[1, 2])
+axs[1, 2].set_title('Count of Students per Branch and Major')
+axs[1, 2].tick_params(axis='x', rotation=90)
+
+# Hide unused subplots
+axs[1, 2].axis('off')
+
+# Display charts
+st.pyplot(fig)
