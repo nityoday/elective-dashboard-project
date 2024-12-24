@@ -6,13 +6,25 @@ from streamlit_extras.let_it_rain import rain
 st.set_page_config(layout="wide")
 
 @st.cache_data
-def load_data(file):
+def load_data(semester):
+    if semester == "Semester 9":
+        file = 'student_electives.xlsx'
+    else:  # Semester 10
+        file = 'student_electives_sem_10.xlsx'  
+        
     df = pd.read_excel(file)
-    df['SAP ID'] = df['SAP ID'].apply(lambda x: f'{x:.0f}')  # Convert SAP ID to string without commas
-    df = df.drop(columns=['Subject 1', 'Subject 2','Subject 3'])
+    df['SAP ID'] = df['SAP ID'].apply(lambda x: f'{x:.0f}')
     return df
 
-data = load_data('student_electives.xlsx')
+# Add semester selector at the top of the sidebar
+st.sidebar.header('Select Semester')
+selected_semester = st.sidebar.radio(
+    "Choose Semester",
+    ["Semester 10", "Semester 9"],  # Semester 10 first as default
+    index=0  # This makes Semester 10 the default selection
+)
+
+data = load_data(selected_semester)
 
 # Sidebar filters
 st.sidebar.header('Choose Filters')
@@ -27,8 +39,8 @@ name = st.sidebar.multiselect('Name', options=data['Name'].unique())
 
 include_mandatory_subjects = st.sidebar.checkbox(
     'Include Mandatory Subjects',
-    value=False,
-    help='Includes mandatory subjects for all students in the data',
+    value=True,
+    help='Includes mandatory subjects for all students in the data (Feature in progress)',
     key='include_mandatory_subjects',
     disabled = True
 ) # Disabled for now. May include later with respect to dropping columns Subject 1,2,3
